@@ -28,6 +28,7 @@ HOSTS: List[Dict[str, Any]] = [
         "name": "EXEC-WS-01",
         "type": "Host",
         "os": "Windows 11",
+        
         "role": "Executive workstation",
         "ip_address": "192.168.1.11",
         "status": "malicious",
@@ -41,8 +42,8 @@ HOSTS: List[Dict[str, Any]] = [
         "os": "Windows 10",
         "role": "IT workstation",
         "ip_address": "192.168.1.118",
-        "status": "suspicious",
-        "severity_score": 55,
+        "status": "clean",
+        "severity_score": 8,
         "timestamp": "2025-02-28T10:45:00Z",
     },
     {
@@ -52,8 +53,8 @@ HOSTS: List[Dict[str, Any]] = [
         "os": "Windows Server 2019",
         "role": "Finance file server",
         "ip_address": "192.168.1.50",
-        "status": "suspicious",
-        "severity_score": 60,
+        "status": "clean",
+        "severity_score": 12,
         "timestamp": "2025-02-28T11:20:00Z",
     },
     {
@@ -74,8 +75,8 @@ HOSTS: List[Dict[str, Any]] = [
         "os": "Windows Server 2022",
         "role": "Backup domain controller",
         "ip_address": "192.168.1.2",
-        "status": "suspicious",
-        "severity_score": 65,
+        "status": "clean",
+        "severity_score": 10,
         "timestamp": "2025-02-28T13:30:00Z",
     },
     {
@@ -85,8 +86,8 @@ HOSTS: List[Dict[str, Any]] = [
         "os": "Windows Server 2019",
         "role": "Mail server",
         "ip_address": "192.168.1.5",
-        "status": "suspicious",
-        "severity_score": 50,
+        "status": "clean",
+        "severity_score": 8,
         "timestamp": "2025-02-28T08:30:00Z",
     },
     {
@@ -98,7 +99,7 @@ HOSTS: List[Dict[str, Any]] = [
         "ip_address": "192.168.1.6",
         "status": "clean",
         "severity_score": 10,
-        "timestamp": "2025-02-28T08:00:00Z",
+        "timestamp": "2025-02-28T07:45:00Z",
     },
     {
         "id": "LEGAL-DESK-23",
@@ -109,7 +110,7 @@ HOSTS: List[Dict[str, Any]] = [
         "ip_address": "192.168.1.23",
         "status": "clean",
         "severity_score": 5,
-        "timestamp": "2025-02-28T08:00:00Z",
+        "timestamp": "2025-02-28T07:50:00Z",
     },
     {
         "id": "HR-LAPTOP-07",
@@ -144,8 +145,8 @@ USERS: List[Dict[str, Any]] = [
         "full_name": "Tom Larson",
         "department": "Finance",
         "privilege_level": "standard",
-        "status": "suspicious",
-        "severity_score": 45,
+        "status": "clean",
+        "severity_score": 15,
         "timestamp": "2025-02-28T09:31:00Z",
     },
     {
@@ -155,8 +156,8 @@ USERS: List[Dict[str, Any]] = [
         "full_name": "Beth Williams",
         "department": "IT Admin",
         "privilege_level": "admin",
-        "status": "suspicious",
-        "severity_score": 58,
+        "status": "clean",
+        "severity_score": 10,
         "timestamp": "2025-02-28T10:45:00Z",
     },
     {
@@ -177,8 +178,8 @@ USERS: List[Dict[str, Any]] = [
         "full_name": "Mark Johnson",
         "department": "Executive",
         "privilege_level": "high",
-        "status": "suspicious",
-        "severity_score": 62,
+        "status": "clean",
+        "severity_score": 8,
         "timestamp": "2025-02-28T11:20:00Z",
     },
     {
@@ -190,7 +191,7 @@ USERS: List[Dict[str, Any]] = [
         "privilege_level": "standard",
         "status": "clean",
         "severity_score": 8,
-        "timestamp": "2025-02-28T08:00:00Z",
+        "timestamp": "2025-02-28T07:52:00Z",
     },
     {
         "id": "dpatel",
@@ -201,7 +202,7 @@ USERS: List[Dict[str, Any]] = [
         "privilege_level": "admin",
         "status": "clean",
         "severity_score": 12,
-        "timestamp": "2025-02-28T08:00:00Z",
+        "timestamp": "2025-02-28T07:55:00Z",
     },
     {
         "id": "kchen",
@@ -212,7 +213,7 @@ USERS: List[Dict[str, Any]] = [
         "privilege_level": "standard",
         "status": "clean",
         "severity_score": 5,
-        "timestamp": "2025-02-28T08:00:00Z",
+        "timestamp": "2025-02-28T07:58:00Z",
     },
 ]
 
@@ -377,7 +378,7 @@ HASHES: List[Dict[str, Any]] = [
         "description": "Microsoft Teams legitimate binary",
         "status": "clean",
         "severity_score": 0,
-        "timestamp": "2025-02-28T08:00:00Z",
+        "timestamp": "2025-02-28T07:45:00Z",
     },
     {
         "id": "HASH-008",
@@ -388,7 +389,7 @@ HASHES: List[Dict[str, Any]] = [
         "description": "Google Chrome legitimate binary",
         "status": "clean",
         "severity_score": 0,
-        "timestamp": "2025-02-28T08:00:00Z",
+        "timestamp": "2025-02-28T07:48:00Z",
     },
     {
         "id": "HASH-009",
@@ -399,7 +400,7 @@ HASHES: List[Dict[str, Any]] = [
         "description": "Adobe Reader legitimate binary",
         "status": "clean",
         "severity_score": 0,
-        "timestamp": "2025-02-28T08:00:00Z",
+        "timestamp": "2025-02-28T07:51:00Z",
     },
     {
         "id": "HASH-010",
@@ -410,7 +411,7 @@ HASHES: List[Dict[str, Any]] = [
         "description": "7-Zip legitimate binary",
         "status": "clean",
         "severity_score": 0,
-        "timestamp": "2025-02-28T08:00:00Z",
+        "timestamp": "2025-02-28T07:54:00Z",
     },
 ]
 
@@ -429,9 +430,9 @@ LOGGED_INTO = [
     {"from_id": "bwilliams", "to_id": "IT-DESK-118", "timestamp": "2025-02-28T10:45:00Z"},
     {"from_id": "rsanchez", "to_id": "HR-LAPTOP-07", "timestamp": "2025-02-28T08:45:00Z"},
     {"from_id": "mjohnson", "to_id": "EXEC-WS-01", "timestamp": "2025-02-28T09:14:00Z"},
-    {"from_id": "akowalski", "to_id": "LEGAL-DESK-23", "timestamp": "2025-02-28T08:00:00Z"},
-    {"from_id": "dpatel", "to_id": "IT-DESK-118", "timestamp": "2025-02-28T08:30:00Z"},
-    {"from_id": "kchen", "to_id": "HR-LAPTOP-07", "timestamp": "2025-02-28T08:00:00Z"},
+    {"from_id": "akowalski", "to_id": "LEGAL-DESK-23", "timestamp": "2025-02-28T07:52:00Z"},
+    {"from_id": "dpatel", "to_id": "IT-DESK-118", "timestamp": "2025-02-28T07:55:00Z"},
+    {"from_id": "kchen", "to_id": "HR-LAPTOP-07", "timestamp": "2025-02-28T07:58:00Z"},
 ]
 
 
@@ -534,9 +535,9 @@ CONNECTED_TO = [
         "technique_id": "T1071",
         "technique_name": "Application Layer Protocol",
     },
-    {"from_id": "LEGAL-DESK-23", "to_id": "8.8.8.8", "timestamp": "2025-02-28T08:00:00Z"},
-    {"from_id": "IT-DESK-118", "to_id": "13.107.42.14", "timestamp": "2025-02-28T08:30:00Z"},
-    {"from_id": "HR-LAPTOP-07", "to_id": "151.101.1.140", "timestamp": "2025-02-28T08:00:00Z"},
+    {"from_id": "LEGAL-DESK-23", "to_id": "8.8.8.8", "timestamp": "2025-02-28T07:50:00Z"},
+    {"from_id": "IT-DESK-118", "to_id": "13.107.42.14", "timestamp": "2025-02-28T07:55:00Z"},
+    {"from_id": "HR-LAPTOP-07", "to_id": "151.101.1.140", "timestamp": "2025-02-28T07:48:00Z"},
 ]
 
 

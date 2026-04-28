@@ -1,5 +1,5 @@
-flask
-flask-cors
+fastapi
+uvicorn
 neo4j
 google-genai
 python-dotenv
