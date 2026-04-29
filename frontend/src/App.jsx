@@ -163,8 +163,20 @@ function blastDepthColor(depth) {
   }
 }
 
+function getSimulationColor(depth) {
+  switch(depth) {
+    case 0: return '#ef4444'  // source — red
+    case 1: return '#ef4444'  // depth 1 — red
+    case 2: return '#f97316'  // depth 2 — orange
+    case 3: return '#eab308'  // depth 3 — yellow
+    default: return '#854d0e' // depth 4+ — dark yellow
+  }
+}
+
 function ThreatNode({ data }) {
   const size = data.size || 36
+  const activeColor = data.simulationColor || data.color
+  const isSimulated = data.isSimulated
   return (
     <div style={{ textAlign: 'center', cursor: 'pointer' }}>
       <Handle type="target" position={Position.Left} style={{background: 'transparent', border: 'none'}} />
@@ -172,9 +184,9 @@ function ThreatNode({ data }) {
         width: size,
         height: size,
         borderRadius: '50%',
-        background: data.color || '#94a3b8',
+        background: activeColor || '#94a3b8',
         border: data.status === 'malicious' ? '2px solid #ef4444' : data.status === 'suspicious' ? '2px solid #f97316' : '1px solid rgba(255,255,255,0.15)',
-        boxShadow: data.status === 'malicious' ? '0 0 12px rgba(239,68,68,0.6)' : 'none',
+        boxShadow: isSimulated ? `0 0 16px ${activeColor}` : data.status === 'malicious' ? '0 0 12px rgba(239,68,68,0.6)' : 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -249,10 +261,23 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [highlightNodes, setHighlightNodes] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(() => new Date())
+  const [simulationActive, setSimulationActive] = useState(false)
+  const [simulationNodes, setSimulationNodes] = useState(new Map()) // nodeId → depth
+  const [activeTab, setActiveTab] = useState('graph') // 'graph' or 'replay'
+  const [replayNodes, setReplayNodes] = useState([]) // nodes revealed so far
+  const [replayIndex, setReplayIndex] = useState(0) // current position
+  const [replayPlaying, setReplayPlaying] = useState(false) // is playing
+  const [replaySpeed, setReplaySpeed] = useState(1000) // ms between nodes
 
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const nodeTypes = useMemo(() => ({ threatNode: ThreatNode }), [])
+
+  const sortedByTime = useMemo(() => {
+    return [...graphData.nodes]
+      .filter(n => n.timestamp)
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+  }, [graphData.nodes])
 
   useEffect(() => {
     let active = true
@@ -308,6 +333,19 @@ function App() {
 
     return () => clearInterval(timerId)
   }, [])
+
+  useEffect(() => {
+    if (!replayPlaying) return
+    if (replayIndex >= sortedByTime.length) {
+      setReplayPlaying(false)
+      return
+    }
+    const timer = setTimeout(() => {
+      setReplayNodes(sortedByTime.slice(0, replayIndex + 1))
+      setReplayIndex(prev => prev + 1)
+    }, replaySpeed)
+    return () => clearTimeout(timer)
+  }, [replayPlaying, replayIndex, sortedByTime, replaySpeed])
 
   const blastDepthMap = useMemo(() => {
     const depthMap = new Map()
@@ -538,6 +576,26 @@ function App() {
     setHypothesis('')
   }
 
+  const handleReplayPlay = () => {
+    if (replayIndex >= sortedByTime.length) {
+      setReplayIndex(0)
+      setReplayNodes([])
+    }
+    setReplayPlaying(true)
+  }
+  const handleReplayPause = () => setReplayPlaying(false)
+  const handleReplayReset = () => {
+    setReplayPlaying(false)
+    setReplayIndex(0)
+    setReplayNodes([])
+  }
+  const handleScrubber = (e) => {
+    const idx = Number(e.target.value)
+    setReplayPlaying(false)
+    setReplayIndex(idx)
+    setReplayNodes(sortedByTime.slice(0, idx))
+  }
+
   const onNodeClick = useCallback(
     async (event, node) => {
       console.log('Node clicked:', node.id, node.data?.id)
@@ -584,6 +642,67 @@ function App() {
     },
     [attackPathMode, pathSource],
   )
+
+  const handleSimulateCompromise = async () => {
+    if (!selectedNode) return
+    setSimulationActive(true)
+    setSimulationNodes(new Map())
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/blast-radius/${selectedNode.id}`)
+      const reachable = response.data?.reachable || []
+
+      // Group nodes by depth
+      const byDepth = {}
+      reachable.forEach(item => {
+        if (!byDepth[item.depth]) byDepth[item.depth] = []
+        byDepth[item.depth].push(item.id)
+      })
+
+      // Start with source node
+      setSimulationNodes(new Map([[selectedNode.id, 0]]))
+
+      // Spread by depth with delays
+      const maxDepth = Math.max(...Object.keys(byDepth).map(Number))
+      for (let depth = 1; depth <= maxDepth; depth++) {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        setSimulationNodes(prev => {
+          const next = new Map(prev)
+          byDepth[depth]?.forEach(id => next.set(id, depth))
+          return next
+        })
+      }
+    } catch (error) {
+      setSimulationActive(false)
+    }
+  }
+
+  const handleResetSimulation = () => {
+    setSimulationActive(false)
+    setSimulationNodes(new Map())
+  }
+
+  useEffect(() => {
+    if (simulationNodes.size === 0) return
+    setNodes(prev => prev.map(node => {
+      const depth = simulationNodes.get(node.id)
+      if (depth === undefined) {
+        return {
+          ...node,
+          data: { ...node.data, simulationColor: null, isSimulated: false }
+        }
+      }
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          simulationColor: getSimulationColor(depth),
+          isSimulated: true,
+          simulationDepth: depth
+        }
+      }
+    }))
+  }, [simulationNodes, setNodes])
 
   const selectedSeverity = Number(selectedNode?.severity_score ?? 0)
   const blastSummary = blastRadius?.summary ?? {
@@ -666,7 +785,20 @@ function App() {
         </div>
       </header>
 
-      <div className="main-content">
+      <div className="tab-bar">
+        <button
+          className={`tab-btn ${activeTab === 'graph' ? 'tab-active' : ''}`}
+          onClick={() => setActiveTab('graph')}>
+          🕸️ Threat Graph
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'replay' ? 'tab-active' : ''}`}
+          onClick={() => setActiveTab('replay')}>
+          ▶ Attack Replay
+        </button>
+      </div>
+
+      <div className="main-content" style={{display: activeTab === 'graph' ? 'flex' : 'none'}}>
         <aside className="sidebar">
           <div className="sidebar-section">
             <div className="sidebar-title">Search</div>
@@ -911,6 +1043,18 @@ function App() {
                   >
                     Show Blast Radius
                   </button>
+
+                  {!simulationActive ? (
+                    <button className="btn-node-action" onClick={handleSimulateCompromise}
+                      style={{borderColor:'#f97316', color:'#f97316'}}>
+                      ⚡ Simulate Compromise
+                    </button>
+                  ) : (
+                    <button className="btn-node-action" onClick={handleResetSimulation}
+                      style={{borderColor:'#ef4444', color:'#ef4444'}}>
+                      ↺ Reset Simulation
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1038,6 +1182,73 @@ function App() {
           )}
         </aside>
       </div>
+
+      {activeTab === 'replay' && (
+        <div className="replay-container">
+          <div className="replay-header">
+            <div className="replay-controls">
+              <button className="btn btn-primary" onClick={handleReplayPlay} disabled={replayPlaying}>
+                ▶ Play
+              </button>
+              <button className="btn" onClick={handleReplayPause} disabled={!replayPlaying}>
+                ⏸ Pause
+              </button>
+              <button className="btn btn-danger" onClick={handleReplayReset}>
+                ↺ Reset
+              </button>
+              <select className="select-input" style={{width:'140px'}}
+                value={replaySpeed} onChange={e => setReplaySpeed(Number(e.target.value))}>
+                <option value={2000}>0.5x Speed</option>
+                <option value={1000}>1x Speed</option>
+                <option value={500}>2x Speed</option>
+                <option value={250}>4x Speed</option>
+              </select>
+            </div>
+            <div className="replay-progress">
+              <span className="replay-stat">
+                {replayNodes.length} / {sortedByTime.length} nodes revealed
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={sortedByTime.length}
+                value={replayIndex}
+                onChange={handleScrubber}
+                className="replay-scrubber"
+              />
+            </div>
+          </div>
+
+          <div className="replay-timeline">
+            {replayNodes.map((node, i) => (
+              <div key={node.id} className="replay-event" style={{
+                animationDelay: `${i * 0.05}s`
+              }}>
+                <div className="replay-dot" style={{
+                  background: node.status === 'malicious' ? '#ef4444' :
+                              node.status === 'suspicious' ? '#f97316' :
+                              node.type === 'Host' ? '#10b981' :
+                              node.type === 'User' ? '#3b82f6' :
+                              node.type === 'Hash' ? '#eab308' :
+                              node.type === 'IP' ? '#8b5cf6' : '#94a3b8'
+                }} />
+                <div className="replay-event-content">
+                  <span className="replay-time">{node.timestamp?.replace('T', ' ').replace('Z', '')}</span>
+                  <span className="replay-name" style={{
+                    color: node.status === 'malicious' ? '#ef4444' :
+                           node.status === 'suspicious' ? '#f97316' : '#e2e8f0'
+                  }}>{node.name}</span>
+                  <span className="replay-type" style={{color:'#4a5568'}}>[{node.type}]</span>
+                  <span className={`status-badge status-${node.status}`}>{node.status}</span>
+                </div>
+              </div>
+            ))}
+            {replayNodes.length === 0 && (
+              <div className="empty-state">Press Play to begin attack replay</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

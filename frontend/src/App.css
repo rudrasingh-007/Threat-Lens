@@ -700,3 +700,128 @@ a {
 .attack-path-active {
 	border: 2px solid #eab308;
 }
+
+.tab-bar {
+	display: flex;
+	gap: 0;
+	background: var(--bg-secondary);
+	border-bottom: 1px solid var(--border);
+	padding: 0 20px;
+	flex-shrink: 0;
+}
+
+.tab-btn {
+	padding: 10px 20px;
+	background: transparent;
+	border: none;
+	border-bottom: 2px solid transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: 12px;
+	font-family: monospace;
+	transition: all 0.2s;
+}
+
+.tab-btn:hover { color: var(--text-primary); }
+
+.tab-active {
+	color: var(--accent-cyan) !important;
+	border-bottom-color: var(--accent-cyan) !important;
+}
+
+.replay-container {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	padding: 20px;
+	gap: 16px;
+}
+
+.replay-header {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	background: var(--bg-panel);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	padding: 16px;
+}
+
+.replay-controls {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.replay-progress {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.replay-stat {
+	font-size: 11px;
+	color: var(--text-muted);
+}
+
+.replay-scrubber {
+	width: 100%;
+	accent-color: var(--accent-cyan);
+}
+
+.replay-timeline {
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.replay-event {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	background: var(--bg-panel);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	animation: fadeIn 0.3s ease forwards;
+	opacity: 0;
+}
+
+.replay-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.replay-event-content {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: 1;
+	font-size: 11px;
+}
+
+.replay-time {
+	color: var(--text-muted);
+	font-family: monospace;
+	min-width: 160px;
+}
+
+.replay-name {
+	font-weight: 600;
+	min-width: 140px;
+}
+
+.replay-type {
+	color: var(--text-muted);
+	min-width: 60px;
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateX(-10px); }
+	to { opacity: 1; transform: translateX(0); }
+}

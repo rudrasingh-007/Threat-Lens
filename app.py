@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from utils.gemini_client import get_mock_hypothesis
+from utils.gemini_client import generate_hypothesis
 from utils.neo4j_client import run_query
 
 
@@ -141,7 +141,28 @@ def get_graph() -> GraphResponse:
 
 @app.get("/api/hypothesis", response_model=HypothesisResponse)
 def hypothesis() -> HypothesisResponse:
-    return HypothesisResponse(hypothesis=get_mock_hypothesis())
+    nodes_query = "MATCH (n) WHERE n.status IN ['malicious', 'suspicious'] RETURN n.name AS name, n.type AS type, n.status AS status, n.severity_score AS severity_score, n.role AS role, n.department AS department, n.description AS description"
+    links_query = "MATCH (n)-[r]->(m) WHERE n.status IN ['malicious', 'suspicious'] OR m.status IN ['malicious', 'suspicious'] RETURN n.name AS source, m.name AS target, type(r) AS relationship, r.technique_id AS technique_id, r.technique_name AS technique_name"
+    
+    nodes = run_query(nodes_query)
+    links = run_query(links_query)
+    
+    graph_summary = f"THREAT NODES:\n"
+    for node in nodes:
+        graph_summary += f"- {node.get('name')} ({node.get('type')}) — Status: {node.get('status')}, Severity: {node.get('severity_score')}"
+        if node.get('role'): graph_summary += f", Role: {node.get('role')}"
+        if node.get('department'): graph_summary += f", Dept: {node.get('department')}"
+        if node.get('description'): graph_summary += f", Description: {node.get('description')}"
+        graph_summary += "\n"
+    
+    graph_summary += f"\nTHREAT RELATIONSHIPS:\n"
+    for link in links:
+        graph_summary += f"- {link.get('source')} → {link.get('target')} via {link.get('relationship')}"
+        if link.get('technique_id'): graph_summary += f" ({link.get('technique_id')}: {link.get('technique_name')})"
+        graph_summary += "\n"
+    
+    hypothesis_text = generate_hypothesis(graph_summary)
+    return HypothesisResponse(hypothesis=hypothesis_text)
 
 
 @app.get("/api/blast-radius/{node_id}", response_model=BlastRadiusResponse)
