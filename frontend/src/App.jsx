@@ -16,6 +16,7 @@ import './App.css'
 const API_BASE_URL = 'http://localhost:5000'
 const NODE_TYPES = ['Host', 'User', 'Hash', 'IP']
 const RELATIONSHIP_TYPES = ['ALL', 'LATERAL_MOVEMENT', 'RAN', 'CONNECTED_TO', 'LOGGED_INTO']
+const EXCLUDED_KEYS = ['size', 'color', 'label', 'isSelected', 'isConnected', 'isSimulated', 'hasSelection', 'simulationColor', 'simulationDepth', 'shortLabel', 'x', 'y', 'vx', 'vy', 'fx', 'fy', 'index']
 
 function nodeColorFn(node) {
   switch (node?.type) {
@@ -538,8 +539,8 @@ function App() {
     }
 
     return Object.entries(selectedNode).filter(
-      ([, value]) =>
-        value !== null && value !== undefined && value !== '',
+      ([key, value]) =>
+        !EXCLUDED_KEYS.includes(key) && value !== null && value !== undefined && value !== '',
     )
   }, [selectedNode])
 

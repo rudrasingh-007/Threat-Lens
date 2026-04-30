@@ -38,9 +38,11 @@ Originally built for the **YNOV Campus Paris Global Hackathon (PS029)** where it
 
 ## Dashboard Preview
 
+### Threat Graph — Full Network View
 ![ThreatLens Dashboard](assets/dashboard_preview.png)
 
-*Interactive threat graph visualization — screenshot placeholder*
+### Node Investigation — Focus Mode
+![ThreatLens Node Details](assets/Nodes.png)
 
 ---
 
