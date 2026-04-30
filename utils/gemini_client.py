@@ -11,7 +11,6 @@ missing or the API call fails, the mock hypothesis is returned.
 from __future__ import annotations
 
 import os
-from typing import Any
 
 from dotenv import load_dotenv
 
@@ -60,13 +59,10 @@ def generate_hypothesis(graph_summary: str) -> str:
     the hardcoded mock hypothesis.
     """
     api_key = os.getenv("GEMINI_API_KEY")
-    print(f"API Key present: {bool(api_key)}")
     if not api_key:
-        print("No API key found, returning mock")
         return get_mock_hypothesis()
 
     try:
-        print(f"Calling Gemini with summary length: {len(graph_summary)}")
         client = genai.Client(api_key=api_key)
         prompt = f"""You are a senior cybersecurity threat analyst working in a SOC.
 Analyze this network graph data from a corporate network and generate a threat assessment report.
@@ -99,10 +95,8 @@ Be specific, use the actual node names from the graph data. Keep it concise and 
             model="gemini-2.5-flash-lite",
             contents=prompt
         )
-        print(f"Gemini response received: {len(response.text)} chars")
         return response.text
-    except Exception as e:
-        print(f"Gemini error: {e}")
+    except Exception:
         return get_mock_hypothesis()
 
 
