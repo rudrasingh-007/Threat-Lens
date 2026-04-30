@@ -17,24 +17,6 @@ const API_BASE_URL = 'http://localhost:5000'
 const NODE_TYPES = ['Host', 'User', 'Hash', 'IP']
 const RELATIONSHIP_TYPES = ['ALL', 'LATERAL_MOVEMENT', 'RAN', 'CONNECTED_TO', 'LOGGED_INTO']
 
-function getNodeColor(node) {
-  if (node?.status === 'malicious') return '#ef4444'
-  if (node?.status === 'suspicious') return '#f97316'
-
-  switch (node?.type) {
-    case 'Host':
-      return '#10b981'
-    case 'User':
-      return '#3b82f6'
-    case 'Hash':
-      return '#eab308'
-    case 'IP':
-      return '#8b5cf6'
-    default:
-      return '#94a3b8'
-  }
-}
-
 function nodeColorFn(node) {
   switch (node?.type) {
     case 'Host':
@@ -65,26 +47,18 @@ function nodeTypeIcon(type) {
   }
 }
 
-const nodeTypIcon = nodeTypeIcon
-
 function getNodeSize(node) {
   const severity = Number(node?.severity_score ?? 0)
   return 28 + (severity / 100) * 16
 }
 
-function getEdgeColor(type) {
-  switch (type) {
-    case 'LATERAL_MOVEMENT':
-      return '#ef4444'
-    case 'RAN':
-      return '#eab308'
-    case 'CONNECTED_TO':
-      return '#8b5cf6'
-    case 'LOGGED_INTO':
-      return '#94a3b8'
-    default:
-      return '#1e2d45'
-  }
+function getConnectedNodeIds(nodeId, edges) {
+  const connected = new Set([nodeId])
+  edges.forEach((edge) => {
+    if (edge.source === nodeId) connected.add(edge.target)
+    if (edge.target === nodeId) connected.add(edge.source)
+  })
+  return connected
 }
 
 function buildLayout(apiNodes, apiLinks) {
@@ -95,16 +69,17 @@ function buildLayout(apiNodes, apiLinks) {
   const maxT = Math.max(...timestamps)
   const range = maxT - minT || 1
 
-  const TYPE_Y = { IP: 0, Hash: 180, Host: 360, User: 540 }
+  const GRAPH_WIDTH = Math.max(window.innerWidth - 600, 800)
+  const TYPE_Y = { IP: 0, Hash: 250, Host: 500, User: 750 }
   const xCounters = {}
 
   const nodes = apiNodes.map((n) => {
     const t = n.timestamp ? new Date(n.timestamp).getTime() : minT
-    const baseX = ((t - minT) / range) * 2400
+    const baseX = ((t - minT) / range) * GRAPH_WIDTH
     const typeKey = `${n.type}_${Math.round(baseX / 60)}`
     xCounters[typeKey] = (xCounters[typeKey] || 0) + 1
-    const xOffset = (xCounters[typeKey] - 1) * 110
-    const x = baseX + xOffset
+    const xOffset = (xCounters[typeKey] - 1) * 140
+    const x = baseX + xOffset + 50
     const y = TYPE_Y[n.type] ?? 360
     const size = 28 + ((n.severity_score || 0) / 100) * 16
     const color = n.status === 'malicious' ? '#ef4444' :
@@ -118,7 +93,17 @@ function buildLayout(apiNodes, apiLinks) {
       id: n.id,
       type: 'threatNode',
       position: { x, y },
-      data: { ...n, size, color, label: n.name || n.id },
+      data: {
+        ...n,
+        size,
+        color,
+        label: n.name || n.id,
+        isSelected: false,
+        isConnected: false,
+        isSimulated: false,
+        simulationDepth: null,
+        simulationColor: null,
+      },
     }
   })
 
@@ -148,21 +133,6 @@ function severityColor(score) {
   return '#ef4444'
 }
 
-function blastDepthColor(depth) {
-  switch (depth) {
-    case 1:
-      return 'rgba(249, 115, 22, 1)'
-    case 2:
-      return 'rgba(249, 115, 22, 0.7)'
-    case 3:
-      return 'rgba(249, 115, 22, 0.4)'
-    case 4:
-      return 'rgba(249, 115, 22, 0.2)'
-    default:
-      return 'rgba(249, 115, 22, 0.2)'
-  }
-}
-
 function getSimulationColor(depth) {
   switch(depth) {
     case 0: return '#ef4444'  // source — red
@@ -177,33 +147,90 @@ function ThreatNode({ data }) {
   const size = data.size || 36
   const activeColor = data.simulationColor || data.color
   const isSimulated = data.isSimulated
+  const simulationDepth = data.simulationDepth
+  const isSelected = Boolean(data.isSelected)
+  const isConnected = Boolean(data.isConnected)
+  const [hovered, setHovered] = useState(false)
+  const [visible, setVisible] = useState(false)
+  const scale = hovered ? 1.1 : isSelected ? 1.15 : isConnected ? 1.05 : 1
+  const hasSelection = data.hasSelection === true
+  const simulationGlow =
+    simulationDepth === 0
+      ? '0 0 20px rgba(239,68,68,0.9), 0 0 40px rgba(239,68,68,0.6)'
+      : simulationDepth === 1
+        ? '0 0 18px rgba(249,115,22,0.8), 0 0 35px rgba(249,115,22,0.5)'
+        : '0 0 15px rgba(234,179,8,0.7), 0 0 25px rgba(234,179,8,0.4)'
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => setVisible(true), 50)
+    return () => clearTimeout(timeoutId)
+  }, [])
+
   return (
-    <div style={{ textAlign: 'center', cursor: 'pointer' }}>
+    <div
+      className="threat-node"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        textAlign: 'center',
+        cursor: 'pointer',
+        transition: 'opacity 0.4s ease, transform 0.3s ease',
+        transform: `scale(${scale})`,
+        opacity: visible ? (isSelected ? 1 : isConnected ? 0.85 : hasSelection ? 0.1 : 0.9) : 0,
+        zIndex: isSelected ? 10 : 'auto'
+      }}
+    >
       <Handle type="target" position={Position.Left} style={{background: 'transparent', border: 'none'}} />
       <div style={{
         width: size,
         height: size,
         borderRadius: '50%',
         background: activeColor || '#94a3b8',
-        border: data.status === 'malicious' ? '2px solid #ef4444' : data.status === 'suspicious' ? '2px solid #f97316' : '1px solid rgba(255,255,255,0.15)',
-        boxShadow: isSimulated ? `0 0 16px ${activeColor}` : data.status === 'malicious' ? '0 0 12px rgba(239,68,68,0.6)' : 'none',
+        border: isSelected
+          ? '2px solid #06b6d4'
+          : data.status === 'malicious'
+            ? '2px solid #ef4444'
+            : data.status === 'suspicious'
+              ? '2px solid #f97316'
+              : '1px solid rgba(255,255,255,0.15)',
+        boxShadow: isSelected
+          ? '0 0 20px rgba(6,182,212,0.9)'
+          : isSimulated
+            ? simulationGlow
+            : !hasSelection && data.status === 'malicious'
+              ? '0 0 10px rgba(239,68,68,0.6)'
+              : !hasSelection && data.status === 'suspicious'
+                ? '0 0 8px rgba(249,115,22,0.5)'
+                : data.status === 'malicious'
+                  ? '0 0 12px rgba(239,68,68,0.6)'
+                  : isConnected
+                    ? '0 0 10px rgba(255,255,255,0.15)'
+                    : 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: '7px',
         fontWeight: '700',
         color: '#000',
-        margin: '0 auto'
+        margin: '0 auto',
+        transition: 'all 0.25s ease',
+        animation: isSimulated ? 'pulseGlow 1.2s ease-in-out infinite' : 'none',
+        animationDelay: isSimulated && simulationDepth !== null ? `${simulationDepth * 0.2}s` : '0s'
       }} />
       <div style={{
         marginTop: 6,
-        fontSize: 10,
-        color: data.status === 'malicious' ? '#ef4444' : data.status === 'suspicious' ? '#f97316' : '#94a3b8',
-        fontFamily: 'Courier New',
+        fontSize: 11,
+        fontWeight: 500,
+        fontFamily: "'JetBrains Mono', monospace",
+        color: '#e2e8f0',
         whiteSpace: 'nowrap',
         maxWidth: 90,
         overflow: 'hidden',
-        textOverflow: 'ellipsis'
+        textOverflow: 'ellipsis',
+        background: 'rgba(0,0,0,0.6)',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        display: 'inline-block'
       }}>
         {data.name || data.id}
       </div>
@@ -259,6 +286,8 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('')
   const [relationshipFilter, setRelationshipFilter] = useState('ALL')
   const [loading, setLoading] = useState(false)
+  const [isBlastLoading, setIsBlastLoading] = useState(false)
+  const [isSimulating, setIsSimulating] = useState(false)
   const [highlightNodes, setHighlightNodes] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(() => new Date())
   const [simulationActive, setSimulationActive] = useState(false)
@@ -272,6 +301,31 @@ function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const nodeTypes = useMemo(() => ({ threatNode: ThreatNode }), [])
+
+  const displayNodes = useMemo(
+    () =>
+      nodes.map((node) => {
+        const isSelected = selectedNode?.id === node.id
+        const isConnected = highlightNodes.has(node.id)
+        const simulationDepth = simulationNodes.get(node.id) ?? null
+
+        return {
+          ...node,
+          position: node.position,
+          data: {
+            ...node.data,
+            isSelected,
+            isConnected,
+            simulationDepth,
+            isSimulated: simulationDepth !== null,
+            simulationColor:
+              simulationDepth !== null ? getSimulationColor(simulationDepth) : null,
+            hasSelection: Boolean(selectedNode),
+          },
+        }
+      }),
+    [highlightNodes, nodes, selectedNode?.id, simulationNodes, selectedNode],
+  )
 
   const sortedByTime = useMemo(() => {
     return [...graphData.nodes]
@@ -346,18 +400,6 @@ function App() {
     }, replaySpeed)
     return () => clearTimeout(timer)
   }, [replayPlaying, replayIndex, sortedByTime, replaySpeed])
-
-  const blastDepthMap = useMemo(() => {
-    const depthMap = new Map()
-
-    blastRadius?.reachable?.forEach((item) => {
-      if (item?.id) {
-        depthMap.set(item.id, item.depth)
-      }
-    })
-
-    return depthMap
-  }, [blastRadius])
 
   const filteredGraphData = useMemo(() => {
     const trimmedSearch = searchTerm.trim().toLowerCase()
@@ -448,66 +490,47 @@ function App() {
     setEdges(layoutEdges)
   }, [filteredGraphData, setNodes, setEdges])
 
-  useEffect(() => {
-    if (highlightNodes.size === 0) {
-      setNodes((prevNodes) =>
-        prevNodes.map((node) => ({
-          ...node,
-          style: {
-            ...node.style,
-            opacity: 1,
-            boxShadow:
-              node.data?.status === 'malicious'
-                ? '0 0 12px rgba(239,68,68,0.6)'
-                : 'none',
-            border:
-              node.data?.status === 'malicious'
-                ? '2px solid #ef4444'
-                : '1px solid #1e2d45',
-          },
-        })),
-      )
-    } else {
-      setNodes((prevNodes) =>
-        prevNodes.map((node) => {
-          const isHighlighted = highlightNodes.has(node.id)
-          const isSelected = selectedNode?.id === node.id
-          const depth = blastDepthMap.get(node.id) ?? 1
+  const renderedEdges = useMemo(
+    () =>
+      (() => {
+        const attackPathEdgeSet = new Set()
 
-          if (isHighlighted) {
-            return {
-              ...node,
-              style: {
-                ...node.style,
-                opacity: 1,
-                border: `2px solid ${blastDepthColor(depth)}`,
-                boxShadow: `0 0 12px ${blastDepthColor(depth)}`,
-              },
-            }
-          } else if (isSelected) {
-            return {
-              ...node,
-              style: {
-                ...node.style,
-                opacity: 1,
-                border: '2px solid #06b6d4',
-                boxShadow: '0 0 12px rgba(6,182,212,0.6)',
-              },
-            }
-          } else {
-            return {
-              ...node,
-              style: {
-                ...node.style,
-                opacity: 0.2,
-                boxShadow: 'none',
-              },
-            }
+        if (attackPath?.path_nodes?.length > 1) {
+          for (let index = 0; index < attackPath.path_nodes.length - 1; index += 1) {
+            attackPathEdgeSet.add(
+              `${attackPath.path_nodes[index]}->${attackPath.path_nodes[index + 1]}`,
+            )
           }
-        }),
-      )
-    }
-  }, [highlightNodes, selectedNode?.id, blastDepthMap, setNodes])
+        }
+
+        return edges.map((edge) => {
+        const sourceHighlighted = highlightNodes.has(edge.source)
+        const targetHighlighted = highlightNodes.has(edge.target)
+        const isHighlighted = sourceHighlighted && targetHighlighted
+        const isAttackPathEdge = attackPathEdgeSet.has(`${edge.source}->${edge.target}`)
+        const isSimulationEdge =
+          simulationNodes.has(edge.source) && simulationNodes.has(edge.target)
+        const isFlowEdge = isAttackPathEdge || isSimulationEdge
+
+        return {
+          ...edge,
+          style: {
+            ...edge.style,
+            opacity: highlightNodes.size === 0 ? 1 : isHighlighted ? 1 : 0.08,
+            strokeWidth:
+              highlightNodes.size === 0
+                ? edge.style?.strokeWidth ?? 1
+                : isHighlighted
+                  ? 2.5
+                  : 1,
+            strokeDasharray: isFlowEdge ? '6 6' : edge.style?.strokeDasharray,
+            animation: isFlowEdge ? 'flow 1s linear infinite' : edge.style?.animation,
+          },
+        }
+        })
+      })(),
+    [attackPath, edges, highlightNodes, simulationNodes],
+  )
 
   const nodeDetails = useMemo(() => {
     if (!selectedNode) {
@@ -525,6 +548,7 @@ function App() {
       return
     }
 
+    setIsBlastLoading(true)
     setLoading(true)
 
     try {
@@ -545,6 +569,7 @@ function App() {
       setBlastRadius(null)
       setHighlightNodes(new Set([nodeId]))
     } finally {
+      setIsBlastLoading(false)
       setLoading(false)
     }
   }
@@ -574,6 +599,16 @@ function App() {
     setShowHypothesis(false)
     setSearchTerm('')
     setHypothesis('')
+    setSimulationActive(false)
+    setSimulationNodes(new Map())
+
+    const { nodes: layoutNodes, edges: layoutEdges } = buildLayout(
+      graphData.nodes,
+      graphData.links,
+    )
+
+    setNodes(layoutNodes)
+    setEdges(layoutEdges)
   }
 
   const handleReplayPlay = () => {
@@ -598,9 +633,6 @@ function App() {
 
   const onNodeClick = useCallback(
     async (event, node) => {
-      console.log('Node clicked:', node.id, node.data?.id)
-      console.log('PathSource:', pathSource?.id, pathSource?.data?.id)
-
       if (attackPathMode) {
         if (!pathSource) {
           setPathSource(node.data)
@@ -613,9 +645,7 @@ function App() {
         try {
           const sourceId = pathSource.id || pathSource.data?.id
           const targetId = node.id || node.data?.id
-          console.log('Fetching attack path:', sourceId, targetId)
           const response = await axios.get(`${API_BASE_URL}/api/attack-path/${sourceId}/${targetId}`)
-          console.log('Attack path response:', response.data)
           setAttackPath(response.data ?? null)
           setHighlightNodes(new Set(response.data?.path_nodes ?? []))
         } catch (error) {
@@ -636,15 +666,17 @@ function App() {
       }
 
       setSelectedNode(node.data)
+      setHighlightNodes(getConnectedNodeIds(node.id, edges))
       setAttackPath(null)
       setPathSource(null)
-      await fetchBlastRadius(node.id)
+      setBlastRadius(null)
     },
-    [attackPathMode, pathSource],
+    [attackPathMode, edges, pathSource],
   )
 
   const handleSimulateCompromise = async () => {
     if (!selectedNode) return
+    setIsSimulating(true)
     setSimulationActive(true)
     setSimulationNodes(new Map())
 
@@ -674,6 +706,8 @@ function App() {
       }
     } catch (error) {
       setSimulationActive(false)
+    } finally {
+      setIsSimulating(false)
     }
   }
 
@@ -681,28 +715,6 @@ function App() {
     setSimulationActive(false)
     setSimulationNodes(new Map())
   }
-
-  useEffect(() => {
-    if (simulationNodes.size === 0) return
-    setNodes(prev => prev.map(node => {
-      const depth = simulationNodes.get(node.id)
-      if (depth === undefined) {
-        return {
-          ...node,
-          data: { ...node.data, simulationColor: null, isSimulated: false }
-        }
-      }
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          simulationColor: getSimulationColor(depth),
-          isSimulated: true,
-          simulationDepth: depth
-        }
-      }
-    }))
-  }, [simulationNodes, setNodes])
 
   const selectedSeverity = Number(selectedNode?.severity_score ?? 0)
   const blastSummary = blastRadius?.summary ?? {
@@ -727,7 +739,7 @@ function App() {
         <div className="header-left">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="live-dot" />
-            <span className="header-title">THREATLENS</span>
+            <span className="header-title">ThreatLens</span>
           </div>
           <span className="header-subtitle">THREAT VISUALIZATION PLATFORM</span>
         </div>
@@ -893,8 +905,8 @@ function App() {
         >
           <ReactFlow
             nodeTypes={nodeTypes}
-            nodes={nodes}
-            edges={edges}
+            nodes={displayNodes}
+            edges={renderedEdges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={onNodeClick}
@@ -912,10 +924,11 @@ function App() {
               }}
             />
             <MiniMap
-              nodeColor={(node) => node.style?.background || '#94a3b8'}
+              nodeColor={(node) => node.data?.simulationColor || node.data?.color || '#94a3b8'}
               style={{
-                background: '#0d1117',
-                border: '1px solid #1e2d45',
+                background: 'rgba(15,23,42,0.8)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 8,
               }}
             />
           </ReactFlow>
@@ -941,7 +954,12 @@ function App() {
         <aside className="right-panel">
           {!selectedNode && !showHypothesis && !attackPath && (
             <div className="empty-state">
-              Click any node to begin investigation
+              <div>👋 Welcome to ThreatLens</div>
+              <div style={{marginTop:'6px'}}>
+                • Click a red node (malicious)<br/>
+                • Run Blast Radius<br/>
+                • Try Simulate Compromise
+              </div>
             </div>
           )}
 
@@ -956,7 +974,7 @@ function App() {
                     color: '#0a0e1a',
                   }}
                 >
-                  {nodeTypIcon(selectedNode.type)} {selectedNode.name}
+                  {nodeTypeIcon(selectedNode.type)} {selectedNode.name}
                 </div>
                 <div className="node-card-body">
                   {nodeDetails.map(([key, value]) => {
@@ -1036,18 +1054,18 @@ function App() {
                   })}
 
                   <button
-                    className="btn-node-action"
-                    onClick={() =>
-                      fetchBlastRadius(selectedNode.id)
-                    }
+                    className={`btn-node-action ${isBlastLoading ? 'btn-loading' : ''}`}
+                    onClick={() => fetchBlastRadius(selectedNode.id)}
+                    disabled={isBlastLoading}
                   >
-                    Show Blast Radius
+                    {isBlastLoading ? 'Running...' : 'Show Blast Radius'}
                   </button>
 
                   {!simulationActive ? (
-                    <button className="btn-node-action" onClick={handleSimulateCompromise}
+                    <button className={`btn-node-action ${isSimulating ? 'btn-loading' : ''}`} onClick={handleSimulateCompromise}
+                      disabled={isSimulating}
                       style={{borderColor:'#f97316', color:'#f97316'}}>
-                      ⚡ Simulate Compromise
+                      {isSimulating ? 'Simulating...' : '⚡ Simulate Compromise'}
                     </button>
                   ) : (
                     <button className="btn-node-action" onClick={handleResetSimulation}
