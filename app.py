@@ -139,7 +139,7 @@ def get_graph() -> GraphResponse:
     return GraphResponse(nodes=nodes, links=links)
 
 
-@app.get("/api/hypothesis", response_model=HypothesisResponse)
+@app.post("/api/hypothesis", response_model=HypothesisResponse)
 def hypothesis() -> HypothesisResponse:
     nodes_query = "MATCH (n) WHERE n.status IN ['malicious', 'suspicious'] RETURN n.name AS name, n.type AS type, n.status AS status, n.severity_score AS severity_score, n.role AS role, n.department AS department, n.description AS description"
     links_query = "MATCH (n)-[r]->(m) WHERE n.status IN ['malicious', 'suspicious'] OR m.status IN ['malicious', 'suspicious'] RETURN n.name AS source, m.name AS target, type(r) AS relationship, r.technique_id AS technique_id, r.technique_name AS technique_name"
