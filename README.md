@@ -140,7 +140,7 @@ ThreatLens/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/rudrasingh-007/Threat-Lens.git
+git clone https://github.com/rudrasingh-007/ThreatLens.git
 cd Threat-Lens
 
 # 2. Backend setup
