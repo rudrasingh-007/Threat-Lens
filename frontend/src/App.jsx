@@ -611,7 +611,7 @@ function App() {
     setLoading(true)
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/hypothesis`)
+      const response = await axios.get(`${API_BASE_URL}/api/hypothesis`)
       setHypothesis(response.data?.hypothesis ?? '')
       setShowHypothesis(true)
     } catch (error) {
@@ -1230,84 +1230,6 @@ function App() {
             </div>
           )}
 
-          {activeTab === 'timeline' && (
-            <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'var(--bg-primary)'}}>
-              <div style={{display:'flex', borderBottom:'1px solid var(--border)', flexShrink:0}}>
-                {[
-                  {label:'TOTAL EVENTS', value: timelineSummary.total, color:'var(--accent-cyan)'},
-                  {label:'MALICIOUS', value: timelineSummary.malicious, color:'#ef4444'},
-                  {label:'SUSPICIOUS', value: timelineSummary.suspicious, color:'#f97316'},
-                  {label:'CLEAN', value: timelineSummary.clean, color:'#10b981'},
-                ].map(item => (
-                  <div key={item.label} style={{flex:1, padding:'20px 24px', borderRight:'1px solid var(--border)'}}>
-                    <div style={{fontSize:'10px', color:'var(--text-muted)', letterSpacing:'2px', marginBottom:'6px'}}>{item.label}</div>
-                    <div style={{fontSize:'28px', fontWeight:'700', color:item.color, fontFamily:'Courier New'}}>{item.value}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{display:'flex', alignItems:'center', padding:'10px 20px', background:'var(--bg-secondary)', borderBottom:'1px solid var(--border)', fontSize:'10px', color:'var(--text-muted)', letterSpacing:'1.5px', flexShrink:0, gap:'12px'}}>
-                <span style={{width:'8px'}}></span>
-                <span style={{flex:2}}>TIMESTAMP</span>
-                <span style={{flex:2}}>NODE</span>
-                <span style={{flex:1}}>TYPE</span>
-                <span style={{flex:3}}>DESCRIPTION</span>
-                <span style={{flex:1}}>STATUS</span>
-              </div>
-
-              <div style={{flex:1, overflowY:'auto'}}>
-                {timelineEvents.map((event, i) => (
-                  <div key={event.id || i} style={{
-                    display:'flex', alignItems:'center', gap:'12px',
-                    padding:'12px 20px',
-                    borderBottom:'1px solid var(--border)',
-                    borderLeft: event.status === 'malicious' ? '3px solid #ef4444' :
-                                event.status === 'suspicious' ? '3px solid #f97316' : '3px solid transparent',
-                    fontSize:'12px',
-                    cursor:'default',
-                    transition:'background 0.15s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background='var(--bg-card)'}
-                  onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                  >
-                    <div style={{
-                      width:'8px', height:'8px', borderRadius:'50%', flexShrink:0,
-                      background: event.status === 'malicious' ? '#ef4444' :
-                                  event.status === 'suspicious' ? '#f97316' :
-                                  event.type === 'Host' ? '#10b981' :
-                                  event.type === 'User' ? '#3b82f6' :
-                                  event.type === 'Hash' ? '#eab308' :
-                                  event.type === 'IP' ? '#8b5cf6' : '#94a3b8'
-                    }} />
-                    <span style={{flex:2, color:'var(--text-muted)', fontFamily:'Courier New', fontSize:'11px'}}>{event.formattedTime}</span>
-                    <span style={{
-                      flex:2, fontFamily:'Courier New',
-                      color: event.status === 'malicious' ? '#ef4444' :
-                             event.status === 'suspicious' ? '#f97316' : '#e2e8f0',
-                      fontWeight: event.status === 'malicious' ? '700' : '400'
-                    }}>{event.name}</span>
-                    <span style={{flex:1}}>
-                      <span style={{
-                        padding:'2px 8px', borderRadius:'3px', fontSize:'9px',
-                        fontWeight:'700', textTransform:'uppercase', letterSpacing:'1px',
-                        background: event.type === 'Host' ? 'rgba(16,185,129,0.15)' :
-                                    event.type === 'User' ? 'rgba(59,130,246,0.15)' :
-                                    event.type === 'Hash' ? 'rgba(234,179,8,0.15)' : 'rgba(139,92,246,0.15)',
-                        color: event.type === 'Host' ? '#10b981' :
-                               event.type === 'User' ? '#3b82f6' :
-                               event.type === 'Hash' ? '#eab308' : '#8b5cf6',
-                      }}>{event.type}</span>
-                    </span>
-                    <span style={{flex:3, fontSize:'11px', color:'var(--text-secondary)'}}>{event.description}</span>
-                    <span style={{flex:1}}>
-                      <span className={`status-badge status-${event.status}`}>{event.status}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {showHypothesis && hypothesis && (
             <div className="panel-section">
               <div className="panel-title">AI Hypothesis</div>
@@ -1316,6 +1238,84 @@ function App() {
           )}
         </aside>
       </div>
+
+      {activeTab === 'timeline' && (
+        <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'var(--bg-primary)'}}>
+          <div style={{display:'flex', borderBottom:'1px solid var(--border)', flexShrink:0}}>
+            {[
+              {label:'TOTAL EVENTS', value: timelineSummary.total, color:'var(--accent-cyan)'},
+              {label:'MALICIOUS', value: timelineSummary.malicious, color:'#ef4444'},
+              {label:'SUSPICIOUS', value: timelineSummary.suspicious, color:'#f97316'},
+              {label:'CLEAN', value: timelineSummary.clean, color:'#10b981'},
+            ].map(item => (
+              <div key={item.label} style={{flex:1, padding:'20px 24px', borderRight:'1px solid var(--border)'}}>
+                <div style={{fontSize:'10px', color:'var(--text-muted)', letterSpacing:'2px', marginBottom:'6px'}}>{item.label}</div>
+                <div style={{fontSize:'28px', fontWeight:'700', color:item.color, fontFamily:'Courier New'}}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{display:'flex', alignItems:'center', padding:'10px 20px', background:'var(--bg-secondary)', borderBottom:'1px solid var(--border)', fontSize:'10px', color:'var(--text-muted)', letterSpacing:'1.5px', flexShrink:0, gap:'12px'}}>
+            <span style={{width:'8px'}}></span>
+            <span style={{flex:2}}>TIMESTAMP</span>
+            <span style={{flex:2}}>NODE</span>
+            <span style={{flex:1}}>TYPE</span>
+            <span style={{flex:3}}>DESCRIPTION</span>
+            <span style={{flex:1}}>STATUS</span>
+          </div>
+
+          <div style={{flex:1, overflowY:'auto'}}>
+            {timelineEvents.map((event, i) => (
+              <div key={event.id || i} style={{
+                display:'flex', alignItems:'center', gap:'12px',
+                padding:'12px 20px',
+                borderBottom:'1px solid var(--border)',
+                borderLeft: event.status === 'malicious' ? '3px solid #ef4444' :
+                            event.status === 'suspicious' ? '3px solid #f97316' : '3px solid transparent',
+                fontSize:'12px',
+                cursor:'default',
+                transition:'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background='var(--bg-card)'}
+              onMouseLeave={e => e.currentTarget.style.background='transparent'}
+              >
+                <div style={{
+                  width:'8px', height:'8px', borderRadius:'50%', flexShrink:0,
+                  background: event.status === 'malicious' ? '#ef4444' :
+                              event.status === 'suspicious' ? '#f97316' :
+                              event.type === 'Host' ? '#10b981' :
+                              event.type === 'User' ? '#3b82f6' :
+                              event.type === 'Hash' ? '#eab308' :
+                              event.type === 'IP' ? '#8b5cf6' : '#94a3b8'
+                }} />
+                <span style={{flex:2, color:'var(--text-muted)', fontFamily:'Courier New', fontSize:'11px'}}>{event.formattedTime}</span>
+                <span style={{
+                  flex:2, fontFamily:'Courier New',
+                  color: event.status === 'malicious' ? '#ef4444' :
+                         event.status === 'suspicious' ? '#f97316' : '#e2e8f0',
+                  fontWeight: event.status === 'malicious' ? '700' : '400'
+                }}>{event.name}</span>
+                <span style={{flex:1}}>
+                  <span style={{
+                    padding:'2px 8px', borderRadius:'3px', fontSize:'9px',
+                    fontWeight:'700', textTransform:'uppercase', letterSpacing:'1px',
+                    background: event.type === 'Host' ? 'rgba(16,185,129,0.15)' :
+                                event.type === 'User' ? 'rgba(59,130,246,0.15)' :
+                                event.type === 'Hash' ? 'rgba(234,179,8,0.15)' : 'rgba(139,92,246,0.15)',
+                    color: event.type === 'Host' ? '#10b981' :
+                           event.type === 'User' ? '#3b82f6' :
+                           event.type === 'Hash' ? '#eab308' : '#8b5cf6',
+                  }}>{event.type}</span>
+                </span>
+                <span style={{flex:3, fontSize:'11px', color:'var(--text-secondary)'}}>{event.description}</span>
+                <span style={{flex:1}}>
+                  <span className={`status-badge status-${event.status}`}>{event.status}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {activeTab === 'replay' && (
         <div className="replay-container">
